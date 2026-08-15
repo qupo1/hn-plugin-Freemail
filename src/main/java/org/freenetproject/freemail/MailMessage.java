@@ -641,7 +641,7 @@ public class MailMessage {
 		private static Charset extractCharsetFromContentType(MailMessage msg) throws UnsupportedEncodingException {
 			String contentType = msg.getFirstHeader("Content-Type");
 			if(contentType == null) {
-				contentType = "text/plain; charset=us-ascii";
+				contentType = "text/plain; charset=utf-8";
 			}
 			String[] parts = contentType.split(";");
 			if(!parts[0].equalsIgnoreCase("text/plain")) {
