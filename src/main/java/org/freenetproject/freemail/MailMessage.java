@@ -21,8 +21,6 @@
 
 package org.freenetproject.freemail;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,6 +32,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -49,6 +48,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
@@ -56,6 +56,8 @@ import java.util.Vector;
 import org.bouncycastle.util.encoders.Hex;
 import org.freenetproject.freemail.imap.IMAPMessageFlags;
 import org.freenetproject.freemail.utils.Logger;
+
+import freenet.support.MediaType;
 
 public class MailMessage {
 	private static final Set<String> dateFormats;
@@ -643,27 +645,25 @@ public class MailMessage {
 			if(contentType == null) {
 				contentType = "text/plain; charset=utf-8";
 			}
-			String[] parts = contentType.split(";");
-			if(!parts[0].equalsIgnoreCase("text/plain")) {
-				throw new UnsupportedEncodingException("Can't handle content types other than text/plain. Type was "
-						+ parts[0]);
+			MediaType parsedType;
+			try {
+				parsedType = new MediaType(contentType);
+			} catch (MalformedURLException e) {
+				throw (UnsupportedEncodingException) new UnsupportedEncodingException("Can't handle content type: \"" + contentType + "\"").initCause(e);
+			}
+			if (!parsedType.getPlainType().equals("text/plain")) {
+				throw new UnsupportedEncodingException("Can't handle content types other than text/plain. Type was " + parsedType);
+			}
+			String charsetName = parsedType.getParameter("charset");
+			if (charsetName == null) {
+				charsetName = "utf-8";
+			}
+			Map<String, String> params = parsedType.getParameters();
+			params.remove("charset");
+			if (!params.isEmpty()) {
+				throw new UnsupportedEncodingException("Can't handle text/plain with parameters other than charset. Unrecognised parameters were: " + params);
 			}
 
-			if (parts.length == 1) {
-				/* no charset in content-type, use utf-8. Fix for https://freenet.mantishub.io/view.php?id=7189. */
-				return UTF_8;
-			}
-
-			String[] charsetParts = parts[1].trim().split("=", 2);
-			if(!charsetParts[0].equalsIgnoreCase("charset")) {
-				throw new UnsupportedEncodingException("Can't handle text/plain with parameter other than charset. "
-						+ "Unrecognised parameters were: " + charsetParts[0]);
-			}
-
-			String charsetName = charsetParts[1];
-			if(charsetName.startsWith("\"") && charsetName.endsWith("\"")) {
-				charsetName = charsetName.substring(1, charsetName.length() - 1);
-			}
 			return Charset.forName(charsetName);
 		}
 

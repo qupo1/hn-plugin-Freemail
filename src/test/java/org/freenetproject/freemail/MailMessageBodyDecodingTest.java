@@ -19,6 +19,8 @@
 
 package org.freenetproject.freemail;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -280,12 +282,29 @@ public class MailMessageBodyDecodingTest {
 		});
 	}
 
+	@Test
+	public void mailWithContentTypeWithNonCharsetParameterWillBeDecodedAsUtf8() throws IOException {
+		parseMailFromLinesAndVerifyBody(asList(
+				"Content-Type: text/plain; invalid=parameter",
+				HEADER_BODY_SEPARATOR,
+				"äöü"
+		), StandardCharsets.ISO_8859_1, reader -> {
+			// \ufffd is the Unicode Replacement Character; when the content-type is deemed to be invalid, it will lead to the body being decoded as UTF-8,
+			// and the umlauts, when encoded as ISO8859-1 cannot be parsed as UTF-8, so they will get replaced.
+			assertThat(reader.readLine(), equalTo("\ufffd\ufffd\ufffd"));
+		});
+	}
+
 	private interface ThrowingConsumer<T, E extends Exception> {
 		void accept(T t) throws E;
 	}
 
 	private void parseMailFromLinesAndVerifyBody(List<String> lines, ThrowingConsumer<BufferedReader, IOException> bodyReader) throws IOException {
-		try (BufferedReader bufferedReader = createMailFileAndParseIt(lines.stream().map(line -> line + LINE_ENDING).collect(toList()))) {
+		parseMailFromLinesAndVerifyBody(lines, StandardCharsets.UTF_8, bodyReader);
+	}
+
+	private void parseMailFromLinesAndVerifyBody(List<String> lines, Charset charset, ThrowingConsumer<BufferedReader, IOException> bodyReader) throws IOException {
+		try (BufferedReader bufferedReader = createMailFileAndParseIt(lines.stream().map(line -> line + LINE_ENDING).collect(toList()), charset)) {
 			bodyReader.accept(bufferedReader);
 		}
 	}
@@ -297,8 +316,12 @@ public class MailMessageBodyDecodingTest {
 	}
 
 	private BufferedReader createMailFileAndParseIt(List<String> lines) throws IOException {
+		return createMailFileAndParseIt(lines, StandardCharsets.UTF_8);
+	}
+
+	private BufferedReader createMailFileAndParseIt(List<String> lines, Charset charset) throws IOException {
 		File messageFile = messageDirectory.newFile();
-		try (PrintWriter printWriter = new PrintWriter(messageFile, "UTF-8")) {
+		try (PrintWriter printWriter = new PrintWriter(messageFile, charset.name())) {
 			lines.forEach(printWriter::write);
 		}
 		return new MailMessage(messageFile, 0).getBodyReader();
