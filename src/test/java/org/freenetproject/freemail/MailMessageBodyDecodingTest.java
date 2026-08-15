@@ -269,18 +269,6 @@ public class MailMessageBodyDecodingTest {
 
 	/* Fix for https://freenet.mantishub.io/view.php?id=7189 */
 	@Test
-	public void mailWithoutCharsetInContentTypeCanBeParsed() throws IOException {
-		parseMailFromLinesAndVerifyBody(asList(
-				"Content-Type: text/plain",
-				HEADER_BODY_SEPARATOR,
-				"Body"
-		), reader -> {
-			assertThat(reader.readLine(), equalTo("Body"));
-			assertThat(reader.readLine(), nullValue());
-		});
-	}
-
-	@Test
 	public void mailWithoutCharsetInContentTypeIsTreatedAsCharsetUtf8() throws IOException {
 		parseMailFromLinesAndVerifyBody(asList(
 				"Content-Type: text/plain",
