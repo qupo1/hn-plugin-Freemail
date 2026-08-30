@@ -6,7 +6,7 @@ Using Freemail
 ==============
 You can compile from source:
 
-# ./gradlew clean test jar
+    ./gradlew clean test jar
 
 run with --newaccount <account name> to create an account, eg:
 
@@ -32,3 +32,11 @@ Set up your email client to point at IMAP port 3143 and SMTP port 3025.
 Feel free to Freemail me on dave@dbkr.freemail! If that doesn't work, my real email address is dbkr@freenetproject.org.
 
 Good luck!
+
+
+Building Freemail on Guix
+-------------------------
+
+To build on Java 8 with all system dependencies declared, use:
+
+    guix shell --pure sed which bash coreutils icedtea icedtea:jdk -- bash -c 'JAVA_HOME=$GUIX_ENVIRONMENT ./gradlew jar'
